@@ -1,20 +1,37 @@
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { EstadoPantalla } from '../../components/feedback/EstadoPantalla';
 import { ReproductorVideo } from '../../components/ui/ReproductorVideo';
 import { useComercio } from '../../hooks/useComercio';
+import { alternarFavoritoLocal, obtenerFavoritosLocales } from '../../storage/favoritos';
 import { obtenerResumenHorario } from '../../utils/horarios';
 
 export default function FichaComercioScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  
   const { comercio, cargando, error, cargar } = useComercio(id as string);
+  const [esFavorito, setEsFavorito] = useState(false);
+
+  // Verificar si es favorito al entrar a la pantalla
+  useEffect(() => {
+    async function verificarFavorito() {
+      const favoritosGuardados = await obtenerFavoritosLocales();
+      setEsFavorito(favoritosGuardados.includes(id as string));
+    }
+    verificarFavorito();
+  }, [id]);
 
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  const manejarBotonFavorito = async () => {
+    const nuevaLista = await alternarFavoritoLocal(id as string);
+    setEsFavorito(nuevaLista.includes(id as string));
+  };
 
   if (cargando) return <EstadoPantalla estado="cargando" />;
   if (error) return <EstadoPantalla estado="error" mensaje={error} onReintentar={cargar} />;
@@ -30,6 +47,15 @@ export default function FichaComercioScreen() {
           <Ionicons name="arrow-back" size={24} color="#0F172A" />
         </TouchableOpacity>
         <Text style={styles.tituloCabecera} numberOfLines={1}>{comercio.nombre}</Text>
+        
+        {/* Botón de Favorito */}
+        <TouchableOpacity onPress={manejarBotonFavorito} style={styles.botonFavorito}>
+          <Ionicons 
+            name={esFavorito ? "star" : "star-outline"} 
+            size={28} 
+            color={esFavorito ? "#F59E0B" : "#94A3B8"} 
+          />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -117,6 +143,7 @@ const styles = StyleSheet.create({
   cabecera: { paddingTop: 50, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center' },
   botonVolver: { padding: 4, marginRight: 12 },
   tituloCabecera: { fontSize: 18, fontWeight: 'bold', color: '#0F172A', flex: 1 },
+  botonFavorito: { padding: 4 },
   scroll: { padding: 16, paddingBottom: 40 },
   imagenPrincipal: { width: '100%', height: 220, borderRadius: 12, marginVertical: 16, backgroundColor: '#E2E8F0' },
   cajaSinMultimedia: { width: '100%', height: 150, borderRadius: 12, marginVertical: 16, backgroundColor: '#F8FAFC', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0', borderStyle: 'dashed' },
