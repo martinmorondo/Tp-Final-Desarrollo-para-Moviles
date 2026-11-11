@@ -1,6 +1,6 @@
-import { kv } from 'expo-sqlite/kv-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const CLAVE_FAVORITOS = 'app_favoritos';
+const CLAVE_FAVORITOS = '@app_favoritos';
 
 /**
  * Obtiene la lista de IDs de comercios guardados como favoritos.
@@ -8,12 +8,12 @@ const CLAVE_FAVORITOS = 'app_favoritos';
  */
 export async function obtenerFavoritosLocales(): Promise<string[]> {
   try {
-    const datos = kv.getItemSync(CLAVE_FAVORITOS);
+    const datos = await AsyncStorage.getItem(CLAVE_FAVORITOS);
     if (datos) {
       return JSON.parse(datos);
     }
   } catch (error) {
-    console.error("Error al leer favoritos de KV-Store:", error);
+    console.error("Error al leer favoritos de AsyncStorage:", error);
   }
   return [];
 }
@@ -34,10 +34,10 @@ export async function alternarFavoritoLocal(comercioId: string): Promise<string[
       nuevosFavoritos = [...actuales, comercioId];
     }
     
-    kv.setItemSync(CLAVE_FAVORITOS, JSON.stringify(nuevosFavoritos));
+    await AsyncStorage.setItem(CLAVE_FAVORITOS, JSON.stringify(nuevosFavoritos));
     return nuevosFavoritos;
   } catch (error) {
-    console.error("Error al guardar favorito en KV-Store:", error);
+    console.error("Error al guardar favorito en AsyncStorage:", error);
     return [];
   }
 }
