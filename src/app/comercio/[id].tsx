@@ -1,20 +1,52 @@
 import Ionicons from '@react-native-vector-icons/ionicons';
+import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { EstadoPantalla } from '../../components/feedback/EstadoPantalla';
 import { ReproductorVideo } from '../../components/ui/ReproductorVideo';
 import { useComercio } from '../../hooks/useComercio';
+import { enviarNotificacionLocal } from '../../services/notificaciones';
+import { alternarFavoritoLocal, obtenerFavoritosLocales } from '../../storage/favoritos';
 import { obtenerResumenHorario } from '../../utils/horarios';
 
 export default function FichaComercioScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+
   const { comercio, cargando, error, cargar } = useComercio(id as string);
+  const [esFavorito, setEsFavorito] = useState(false);
+
+  // Verificar si es favorito al entrar a la pantalla
+  useEffect(() => {
+    async function verificarFavorito() {
+      const favoritosGuardados = await obtenerFavoritosLocales();
+      setEsFavorito(favoritosGuardados.includes(id as string));
+    }
+    verificarFavorito();
+  }, [id]);
 
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  const manejarBotonFavorito = async () => {
+    // 1. Impacto háptico (Requisito 8)
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // 2. Guardado en KV-Store
+    const nuevaLista = await alternarFavoritoLocal(id as string);
+    const ahoraEsFavorito = nuevaLista.includes(id as string);
+    setEsFavorito(ahoraEsFavorito);
+
+    // 3. Notificación local real (Requisito 6)
+    if (ahoraEsFavorito && comercio) {
+      enviarNotificacionLocal(
+        "¡Nuevo Favorito Guardado!",
+        `Agregaste a ${comercio.nombre}. Te avisaremos cuando tengan nuevas promociones.`
+      );
+    }
+  };
 
   if (cargando) return <EstadoPantalla estado="cargando" />;
   if (error) return <EstadoPantalla estado="error" mensaje={error} onReintentar={cargar} />;
@@ -30,10 +62,19 @@ export default function FichaComercioScreen() {
           <Ionicons name="arrow-back" size={24} color="#0F172A" />
         </TouchableOpacity>
         <Text style={styles.tituloCabecera} numberOfLines={1}>{comercio.nombre}</Text>
+
+        {/* Botón de Favorito */}
+        <TouchableOpacity onPress={manejarBotonFavorito} style={styles.botonFavorito}>
+          <Ionicons
+            name={esFavorito ? "star" : "star-outline"}
+            size={28}
+            color={esFavorito ? "#F59E0B" : "#94A3B8"}
+          />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        
+
         {/* Lógica de Multimedia: Video -> Fotos -> Mensaje Vacío */}
         {comercio.videoUrl ? (
           <ReproductorVideo url={comercio.videoUrl} />
@@ -49,11 +90,11 @@ export default function FichaComercioScreen() {
         {/* Información Básica */}
         <View style={styles.seccion}>
           <Text style={styles.nombre}>{comercio.nombre}</Text>
-          
+
           <Text style={[styles.etiquetaHorario, horarioInfo.abierto ? styles.abierto : styles.cerrado]}>
             {horarioInfo.etiqueta}
           </Text>
-          
+
           <View style={styles.filaPuntaje}>
             <Ionicons name="star" size={16} color="#F59E0B" />
             <Text style={styles.puntaje}>
@@ -70,7 +111,7 @@ export default function FichaComercioScreen() {
             <Ionicons name="location-outline" size={20} color="#1E3A8A" />
             <Text style={styles.textoContacto}>{comercio.direccion}</Text>
           </View>
-          
+
           {comercio.telefono && (
             <View style={styles.filaContacto}>
               <Ionicons name="call-outline" size={20} color="#1E3A8A" />
@@ -114,9 +155,29 @@ export default function FichaComercioScreen() {
 
 const styles = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: '#FFFFFF' },
-  cabecera: { paddingTop: 50, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center' },
+  cabecera: { 
+    paddingTop: 50, 
+    paddingBottom: 12, 
+    paddingHorizontal: 16, 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#E2E8F0', 
+    flexDirection: 'row', 
+    alignItems: 'center',
+    justifyContent: 'space-between' // Esto asegura que los extremos se empujen a los bordes
+  },
   botonVolver: { padding: 4, marginRight: 12 },
-  tituloCabecera: { fontSize: 18, fontWeight: 'bold', color: '#0F172A', flex: 1 },
+  tituloCabecera: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    color: '#0F172A', 
+    flex: 1, // Sigue ocupando el centro
+    marginRight: 12 // Deja espacio para que el botón no se apriete
+  },
+  botonFavorito: { 
+    padding: 4,
+    minWidth: 44, // Área táctil mínima recomendada en móviles
+    alignItems: 'center'
+  },
   scroll: { padding: 16, paddingBottom: 40 },
   imagenPrincipal: { width: '100%', height: 220, borderRadius: 12, marginVertical: 16, backgroundColor: '#E2E8F0' },
   cajaSinMultimedia: { width: '100%', height: 150, borderRadius: 12, marginVertical: 16, backgroundColor: '#F8FAFC', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0', borderStyle: 'dashed' },
