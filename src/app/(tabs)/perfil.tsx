@@ -15,7 +15,17 @@ export default function PerfilScreen() {
           <Text style={styles.nombre}>{usuario.nombre}</Text>
           <Text style={styles.email}>{usuario.email}</Text>
           <Text style={styles.rol}>Rol: {usuario.rol}</Text>
-          
+
+          {/* NUEVO BOTÓN EXCLUSIVO PARA COMERCIOS */}
+          {usuario.rol === 'comercio' && (
+            <TouchableOpacity 
+              style={{ backgroundColor: '#10B981', padding: 12, borderRadius: 8, marginTop: 16, alignItems: 'center' }} 
+              onPress={() => router.push('/comercio-panel')}
+            >
+              <Text style={{ color: 'white', fontWeight: 'bold' }}>Ir a mi Panel de Comercio</Text>
+            </TouchableOpacity>
+          )}
+                    
           <TouchableOpacity style={styles.botonSalir} onPress={cerrarSesion}>
             <Text style={styles.textoBoton}>Cerrar Sesión</Text>
           </TouchableOpacity>

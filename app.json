@@ -6,29 +6,43 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "scheme": "directorioccu",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#1E3A8A"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.martinmorondo.directorioccu"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1E3A8A"
       },
-      "package": "ar.org.ccu.directorio"
+      "package": "com.martinmorondo.directorioccu"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Directorio CCU necesita acceder a tu ubicación para mostrarte los comercios locales que tienes cerca en el mapa interactivo."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Directorio CCU necesita acceso a la cámara para que los comercios puedan escanear y validar los códigos QR de las promociones."
+        }
+      ],
       "expo-secure-store",
-      "expo-video",
-      "expo-sqlite"
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
