@@ -26,21 +26,6 @@ export async function iniciarSesionServicio(
   email: string,
   contrasena: string
 ): Promise<ApiResponse<RespuestaAutenticacion>> {
-  // --- INICIO DEL ATAJO PARA PRUEBAS ---
-  if (email === 'comercio@mail.com') {
-    return {
-      datos: {
-        token: 'token-falso-comercio-123',
-        usuario: {
-          id: 'com-999',
-          nombre: 'Comercio de Prueba',
-          email: 'comercio@mail.com',
-          rol: 'comercio' as const
-        }
-      }
-    };
-  }
-  // --- FIN DEL ATAJO ---
 
   if (!USAR_MOCKS) {
     return peticionApi<RespuestaAutenticacion>("/auth/login", {

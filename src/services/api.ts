@@ -1,11 +1,14 @@
+
 import { ApiResponse } from "../types";
 
 // Cuando se habilite la API real, solo cambiamos USAR_MOCKS a false
-export const USAR_MOCKS = true;
-export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || "https://api.ccu.org.ar";
+export const USAR_MOCKS = false;
 
-// Permite simular un fallo de red para probar los estados de error en pantalla
+// URL base del backend NestJS
+export const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL || "http://192.168.0.244:3000";
+
+// Permite simular un fallo de red
 let simularFalloDeRed = false;
 
 export function configurarSimulacionErrorRed(activar: boolean): void {
