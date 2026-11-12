@@ -1,3 +1,4 @@
+
 import { MOCK_USUARIOS } from "../mocks/datos";
 import { ApiResponse, Usuario } from "../types";
 import {
@@ -17,43 +18,50 @@ export interface RespuestaAutenticacion {
 }
 
 /**
- * Inicia sesión validando email y contraseña.
- * Para pruebas con Mocks:
- * - Vecino: marta@mail.com (cualquier contraseña de 4+ caracteres)
- * - Comercio: roberto@eltornillo.com (cualquier contraseña de 4+ caracteres)
+ * Inicia sesión con las credenciales del usuario.
  */
 export async function iniciarSesionServicio(
   email: string,
   contrasena: string
 ): Promise<ApiResponse<RespuestaAutenticacion>> {
-
   if (!USAR_MOCKS) {
-    return peticionApi<RespuestaAutenticacion>("/auth/login", {
+    return peticionApi<RespuestaAutenticacion>(
+    "/auth/ingreso",
+    {
       method: "POST",
       body: JSON.stringify({ email, contrasena })
-    });
+    },
+    null
+  );
   }
 
-  // Comportamiento del Mock normal
+  await simularLatencia(1000);
+
+  const errorRed = verificarErrorRedSimulado<RespuestaAutenticacion>();
+  if (errorRed) return errorRed;
+
   return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        datos: {
-          token: "token-falso-mock-123",
-          usuario: {
-            id: "usr-123",
-            nombre: "Usuario Mock",
-            email: email,
-            rol: "vecino"
-          }
+    resolve({
+      datos: {
+        token: "token-falso-mock-123",
+        usuario: {
+          id: "usr-123",
+          nombre: "Usuario Mock",
+          email,
+          rol: "vecino",
+          comercioId: null,
+          favoritos: [],
+          rubrosDeInteres: [],
+          avisosActivos: true
         }
-      });
-    }, 1000);
+      }
+    });
   });
 }
 
 /**
- * Registra un nuevo vecino en la plataforma.
+ * Registra un nuevo vecino.
+ * La API asigna automáticamente el rol vecino.
  */
 export async function registrarUsuarioServicio(
   nombre: string,
@@ -61,24 +69,34 @@ export async function registrarUsuarioServicio(
   contrasena: string
 ): Promise<ApiResponse<RespuestaAutenticacion>> {
   if (!USAR_MOCKS) {
-    return peticionApi<RespuestaAutenticacion>("/auth/registro", {
-      method: "POST",
-      body: JSON.stringify({ nombre, email, contrasena })
-    });
+    return peticionApi<RespuestaAutenticacion>(
+      "/auth/registro",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          nombre: nombre.trim(),
+          email: email.trim().toLowerCase(),
+          contrasena
+        })
+      },
+      null
+    );
   }
 
   await simularLatencia(500);
+
   const errorRed = verificarErrorRedSimulado<RespuestaAutenticacion>();
   if (errorRed) return errorRed;
 
   const emailLimpio = email.trim().toLowerCase();
+
   const existe = usuariosMemoria.some(
-    (u) => u.email.toLowerCase() === emailLimpio
+    (usuario) => usuario.email.toLowerCase() === emailLimpio
   );
 
   if (existe) {
     return crearRespuestaError(
-      "EMAIL_EN_USO",
+      "EMAIL_YA_REGISTRADO",
       "Ya existe una cuenta registrada con ese correo electrónico."
     );
   }
@@ -95,6 +113,7 @@ export async function registrarUsuarioServicio(
   };
 
   usuariosMemoria.push(nuevoUsuario);
+
   const tokenSimulado = `jwt-mock-${nuevoUsuario.id}-${Date.now()}`;
 
   return crearRespuestaExito(
@@ -107,21 +126,23 @@ export async function registrarUsuarioServicio(
 }
 
 /**
- * Recupera la sesión del usuario a partir del token guardado en SecureStore.
+ * Recupera el perfil del usuario autenticado.
+ * La API obtiene la identidad a partir del token Bearer.
  */
 export async function obtenerPerfilPorToken(
   token: string
 ): Promise<ApiResponse<Usuario>> {
   if (!USAR_MOCKS) {
-    return peticionApi<Usuario>("/auth/perfil", {}, token);
+    return peticionApi<Usuario>("/yo", {}, token);
   }
 
   await simularLatencia(250);
+
   const errorRed = verificarErrorRedSimulado<Usuario>();
   if (errorRed) return errorRed;
 
-  const usuarioEncontrado = usuariosMemoria.find((u) =>
-    token.includes(u.id)
+  const usuarioEncontrado = usuariosMemoria.find((usuario) =>
+    token.includes(usuario.id)
   );
 
   if (!usuarioEncontrado) {
@@ -135,28 +156,44 @@ export async function obtenerPerfilPorToken(
 }
 
 /**
- * Actualiza favoritos, rubros de interés o el interruptor general de avisos.
+ * Actualiza las preferencias de la cuenta autenticada.
+ *
+ * La API identifica al usuario mediante el token.
+ * Se conserva usuarioId en la firma para no romper
+ * las llamadas que ya existen en la aplicación.
  */
 export async function actualizarPreferenciasUsuario(
   usuarioId: string,
-  cambios: Partial<Pick<Usuario, "favoritos" | "rubrosDeInteres" | "avisosActivos">>,
+  cambios: Partial<
+    Pick<Usuario, "favoritos" | "rubrosDeInteres" | "avisosActivos">
+  >,
   token: string | null = null
 ): Promise<ApiResponse<Usuario>> {
   if (!USAR_MOCKS) {
     return peticionApi<Usuario>(
-      `/usuarios/${usuarioId}/preferencias`,
-      { method: "PATCH", body: JSON.stringify(cambios) },
-      token
-    );
+    "/yo",
+    {
+      method: "PATCH",
+      body: JSON.stringify(cambios)
+    },
+    token
+  );
   }
 
   await simularLatencia(250);
+
   const errorRed = verificarErrorRedSimulado<Usuario>();
   if (errorRed) return errorRed;
 
-  const indice = usuariosMemoria.findIndex((u) => u.id === usuarioId);
+  const indice = usuariosMemoria.findIndex(
+    (usuario) => usuario.id === usuarioId
+  );
+
   if (indice === -1) {
-    return crearRespuestaError("USUARIO_NO_ENCONTRADO", "El usuario no existe.");
+    return crearRespuestaError(
+      "USUARIO_NO_ENCONTRADO",
+      "El usuario no existe."
+    );
   }
 
   const actualizado: Usuario = {
@@ -165,5 +202,6 @@ export async function actualizarPreferenciasUsuario(
   };
 
   usuariosMemoria[indice] = actualizado;
+
   return crearRespuestaExito({ ...actualizado }, 1);
 }

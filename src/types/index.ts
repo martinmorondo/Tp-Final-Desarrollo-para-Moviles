@@ -111,6 +111,6 @@ export interface ApiError {
 // Interfaz genérica para tipar las respuestas
 export interface ApiResponse<T> {
   datos?: T;
-  meta?: MetaData;
+  meta?: MetaData | null;
   error?: ApiError;
 }

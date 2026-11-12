@@ -1,14 +1,20 @@
+
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-// Configuración global: le dice al teléfono qué hacer cuando llega una notificación mientras la app está abierta
+// Configuración global del comportamiento de las notificaciones
+// cuando la aplicación está abierta.
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
 });
+
+
 
 /**
  * Solicita permiso al usuario para enviar notificaciones.

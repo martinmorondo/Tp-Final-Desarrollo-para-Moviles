@@ -1,14 +1,16 @@
 
+import * as SecureStore from "expo-secure-store";
 import { ApiResponse } from "../types";
 
-// Cuando se habilite la API real, solo cambiamos USAR_MOCKS a false
+// Cuando se habilite la API real, solo cambiamos USAR_MOCKS a false.
 export const USAR_MOCKS = false;
 
-// URL base del backend NestJS
-export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || "http://192.168.0.244:3000";
+// URL base del backend.
+export const API_BASE_URL = (
+  process.env.EXPO_PUBLIC_API_URL || "http://192.168.0.244:3000"
+).replace(/\/$/, "");
 
-// Permite simular un fallo de red
+// Permite simular un fallo de red.
 let simularFalloDeRed = false;
 
 export function configurarSimulacionErrorRed(activar: boolean): void {
@@ -20,15 +22,14 @@ export function estaSimulandoErrorRed(): boolean {
 }
 
 /**
- * Simula el tiempo de respuesta de un servidor real (por defecto 350ms).
+ * Simula el tiempo de respuesta de un servidor real.
  */
 export async function simularLatencia(ms: number = 350): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
- * Construye una respuesta exitosa respetando el contrato de la cátedra:
- * { datos: T, meta: { total, pagina, porPagina } }
+ * Construye una respuesta exitosa.
  */
 export function crearRespuestaExito<T>(
   datos: T,
@@ -47,8 +48,7 @@ export function crearRespuestaExito<T>(
 }
 
 /**
- * Construye una respuesta de error respetando el contrato de la cátedra:
- * { error: { codigo, mensaje } }
+ * Construye una respuesta de error.
  */
 export function crearRespuestaError<T>(
   codigo: string,
@@ -63,7 +63,7 @@ export function crearRespuestaError<T>(
 }
 
 /**
- * Verifica si se activó la simulación de error de red en modo Mock.
+ * Verifica si se activó la simulación de error de red.
  */
 export function verificarErrorRedSimulado<T>(): ApiResponse<T> | null {
   if (simularFalloDeRed) {
@@ -72,26 +72,51 @@ export function verificarErrorRedSimulado<T>(): ApiResponse<T> | null {
       "No pudimos conectarnos con el servidor. Verificá tu conexión a internet."
     );
   }
+
   return null;
 }
 
 /**
- * Cliente HTTP preparado para cuando la API de la cátedra esté disponible.
- * Envía automáticamente Authorization: Bearer <token> si recibe un token.
+ * Cliente HTTP centralizado.
+ *
+ * Si no se especifica un token, lo recupera automáticamente
+ * desde SecureStore y lo envía como Bearer.
+ *
+ * Si se pasa null, no envía token (por ejemplo, login y registro).
  */
 export async function peticionApi<T>(
   endpoint: string,
   opciones: RequestInit = {},
-  token: string | null = null
+  token?: string | null
 ): Promise<ApiResponse<T>> {
   try {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      ...(opciones.headers as Record<string, string>)
-    };
+    const headers = new Headers(opciones.headers);
 
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
+    headers.set("Accept", "application/json");
+
+    const esFormData =
+      typeof FormData !== "undefined" &&
+      opciones.body instanceof FormData;
+
+    // No establecer Content-Type manualmente para FormData:
+    // fetch debe generar automáticamente el boundary multipart.
+    if (
+      opciones.body &&
+      !esFormData &&
+      !headers.has("Content-Type")
+    ) {
+      headers.set("Content-Type", "application/json");
+    }
+
+    // Si token es undefined, recuperamos la sesión guardada.
+    // Si es null, respetamos la decisión de no enviar token.
+    const tokenAutenticacion =
+      token === undefined
+        ? await SecureStore.getItemAsync("sesion_token")
+        : token;
+
+    if (tokenAutenticacion) {
+      headers.set("Authorization", `Bearer ${tokenAutenticacion}`);
     }
 
     const respuesta = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -99,7 +124,31 @@ export async function peticionApi<T>(
       headers
     });
 
-    const json = (await respuesta.json()) as ApiResponse<T>;
+    // Algunas operaciones, como DELETE, responden con HTTP 204
+    // y no incluyen contenido.
+    const texto = await respuesta.text();
+
+    if (!texto.trim()) {
+      if (!respuesta.ok) {
+        return crearRespuestaError<T>(
+          `HTTP_${respuesta.status}`,
+          "Ocurrió un error al comunicarse con el servidor."
+        );
+      }
+
+      return {} as ApiResponse<T>;
+    }
+
+    let json: ApiResponse<T>;
+
+    try {
+      json = JSON.parse(texto) as ApiResponse<T>;
+    } catch {
+      return crearRespuestaError<T>(
+        "RESPUESTA_INVALIDA",
+        "El servidor devolvió una respuesta que no pudimos interpretar."
+      );
+    }
 
     if (!respuesta.ok && !json.error) {
       return crearRespuestaError<T>(
@@ -109,7 +158,9 @@ export async function peticionApi<T>(
     }
 
     return json;
-  } catch {
+  } catch (error) {
+    console.error("Error en petición API:", error);
+
     return crearRespuestaError<T>(
       "ERROR_RED",
       "No pudimos conectarnos con el servidor. Verificá tu conexión a internet."
