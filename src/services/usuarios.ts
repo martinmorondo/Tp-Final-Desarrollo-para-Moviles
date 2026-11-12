@@ -1,12 +1,12 @@
 import { MOCK_USUARIOS } from "../mocks/datos";
 import { ApiResponse, Usuario } from "../types";
 import {
-    USAR_MOCKS,
-    crearRespuestaError,
-    crearRespuestaExito,
-    peticionApi,
-    simularLatencia,
-    verificarErrorRedSimulado
+  USAR_MOCKS,
+  crearRespuestaError,
+  crearRespuestaExito,
+  peticionApi,
+  simularLatencia,
+  verificarErrorRedSimulado
 } from "./api";
 
 let usuariosMemoria: Usuario[] = [...MOCK_USUARIOS];
@@ -26,6 +26,7 @@ export async function iniciarSesionServicio(
   email: string,
   contrasena: string
 ): Promise<ApiResponse<RespuestaAutenticacion>> {
+
   if (!USAR_MOCKS) {
     return peticionApi<RespuestaAutenticacion>("/auth/login", {
       method: "POST",
@@ -33,31 +34,22 @@ export async function iniciarSesionServicio(
     });
   }
 
-  await simularLatencia(450);
-  const errorRed = verificarErrorRedSimulado<RespuestaAutenticacion>();
-  if (errorRed) return errorRed;
-
-  const emailLimpio = email.trim().toLowerCase();
-  const usuario = usuariosMemoria.find(
-    (u) => u.email.toLowerCase() === emailLimpio
-  );
-
-  if (!usuario || contrasena.trim().length < 4) {
-    return crearRespuestaError(
-      "CREDENCIALES_INVALIDAS",
-      "El correo o la contraseña ingresados no son correctos."
-    );
-  }
-
-  const tokenSimulado = `jwt-mock-${usuario.id}-${Date.now()}`;
-
-  return crearRespuestaExito(
-    {
-      usuario: { ...usuario },
-      token: tokenSimulado
-    },
-    1
-  );
+  // Comportamiento del Mock normal
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        datos: {
+          token: "token-falso-mock-123",
+          usuario: {
+            id: "usr-123",
+            nombre: "Usuario Mock",
+            email: email,
+            rol: "vecino"
+          }
+        }
+      });
+    }, 1000);
+  });
 }
 
 /**

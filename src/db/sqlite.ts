@@ -1,14 +1,21 @@
 import * as SQLite from 'expo-sqlite';
+import { Platform } from 'react-native';
 import { Comercio } from '../types';
 
-// En Expo SDK 50+, se usa openDatabaseSync
-export const db = SQLite.openDatabaseSync('directorio.db');
+// Solo abrimos la base de datos real si estamos en un celular (iOS/Android)
+// En la web, expo-sqlite requiere configuraciones especiales (SharedArrayBuffer) que harían crashear la app.
+export const db = Platform.OS === 'web' ? null : SQLite.openDatabaseSync('directorio.db');
 
 /**
  * Inicializa las tablas necesarias para guardar los comercios y sus horarios
  * de forma local. Permite el funcionamiento offline exigido.
  */
 export function inicializarBaseDeDatos() {
+  if (Platform.OS === 'web' || !db) {
+    console.log("SQLite desactivado en entorno Web para evitar errores de SharedArrayBuffer.");
+    return;
+  }
+
   db.execSync(`
     CREATE TABLE IF NOT EXISTS comercios (
       id TEXT PRIMARY KEY NOT NULL,
@@ -37,6 +44,8 @@ export function inicializarBaseDeDatos() {
  * Primero borra los anteriores para mantener la caché fresca.
  */
 export function guardarComerciosLocal(comercios: Comercio[]) {
+  if (Platform.OS === 'web' || !db) return;
+
   try {
     db.withTransactionSync(() => {
       // Limpiar caché vieja
