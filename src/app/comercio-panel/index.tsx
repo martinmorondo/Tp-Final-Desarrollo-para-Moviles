@@ -89,7 +89,12 @@ const styles = StyleSheet.create({
   textoBotonSalir: { color: '#EF4444', fontSize: 16, fontWeight: 'bold' },
   contenedorCamara: { flex: 1, borderRadius: 16, overflow: 'hidden', backgroundColor: '#000' },
   camara: { flex: 1 },
-  capaSuperpuesta: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
+  capaSuperpuesta: {
+  ...StyleSheet.absoluteFill,
+  justifyContent: 'center',
+  alignItems: 'center',
+  backgroundColor: 'rgba(0,0,0,0.4)'
+},
   marcoEscaneo: { width: 250, height: 250, borderWidth: 2, borderColor: '#10B981', backgroundColor: 'transparent', borderRadius: 16, marginBottom: 20 },
   textoCamara: { color: '#FFFFFF', fontSize: 16, fontWeight: '600', marginBottom: 40 },
   botonCancelar: { backgroundColor: '#FFFFFF', paddingHorizontal: 32, paddingVertical: 12, borderRadius: 24 },

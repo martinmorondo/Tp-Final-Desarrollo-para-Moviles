@@ -28,41 +28,69 @@ export default function LoginScreen() {
   const [cargando, setCargando] = useState(false);
   const [errorMensaje, setErrorMensaje] = useState<string | null>(null);
 
-  const procesarFormulario = async () => {
-    // Validaciones básicas antes de tocar el servicio
-    if (!email.trim() || !contrasena.trim()) {
-      setErrorMensaje("Por favor, completá tu correo y contraseña.");
-      return;
-    }
-    
-    if (modo === 'registro' && !nombre.trim()) {
-      setErrorMensaje("Para registrarte, ingresá tu nombre completo.");
-      return;
-    }
+ 
+const procesarFormulario = async () => {
+  const emailLimpio = email.trim().toLowerCase();
 
-    setCargando(true);
-    setErrorMensaje(null);
+  // Validaciones básicas
+  if (!emailLimpio || !contrasena.trim()) {
+    setErrorMensaje("Por favor, completá tu correo y contraseña.");
+    return;
+  }
 
-    const respuesta = modo === 'login' 
-      ? await iniciarSesionServicio(email, contrasena)
-      : await registrarUsuarioServicio(nombre, email, contrasena);
+  if (modo === "registro" && !nombre.trim()) {
+    setErrorMensaje("Para registrarte, ingresá tu nombre completo.");
+    return;
+  }
+
+  if (modo === "registro" && contrasena.length < 8) {
+    setErrorMensaje("La contraseña debe tener al menos 8 caracteres.");
+    return;
+  }
+
+  setCargando(true);
+  setErrorMensaje(null);
+
+  try {
+    const respuesta =
+      modo === "login"
+        ? await iniciarSesionServicio(emailLimpio, contrasena)
+        : await registrarUsuarioServicio(
+            nombre.trim(),
+            emailLimpio,
+            contrasena
+          );
 
     if (respuesta.error) {
       setErrorMensaje(respuesta.error.mensaje);
-      setCargando(false);
-    } else if (respuesta.datos) {
-      // Inyectamos el usuario y token en el contexto global
-      await iniciarSesion(respuesta.datos.usuario, respuesta.datos.token);
-      setCargando(false);
-      
-      // Si el login fue exitoso, cerramos el modal
-      if (router.canGoBack()) {
-        router.back();
-      } else {
-        router.replace('/');
-      }
+      return;
     }
-  };
+
+    if (!respuesta.datos) {
+      setErrorMensaje("El servidor devolvió una respuesta inesperada.");
+      return;
+    }
+
+    // Guardamos el token y el usuario en el contexto global.
+    await iniciarSesion(
+      respuesta.datos.usuario,
+      respuesta.datos.token
+    );
+
+    // Volvemos a la pantalla anterior o a la pantalla principal.
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/");
+    }
+  } catch (error) {
+    console.error("Error al procesar autenticación:", error);
+    setErrorMensaje("No pudimos completar la operación. Intentá nuevamente.");
+  } finally {
+    setCargando(false);
+  }
+};
+
 
   return (
     <KeyboardAvoidingView 
