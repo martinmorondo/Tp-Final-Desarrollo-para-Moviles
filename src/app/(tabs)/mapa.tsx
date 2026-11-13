@@ -45,7 +45,7 @@ export default function MapaScreen() {
     longitud: -58.2372
   };
 
-  const ubicacionMapa = ubicacionUsuario || ubicacionPredeterminada;
+  const ubicacionMapa = ubicacionPredeterminada;
 
   // Compatibilidad con navegador web.
   if (Platform.OS === 'web') {

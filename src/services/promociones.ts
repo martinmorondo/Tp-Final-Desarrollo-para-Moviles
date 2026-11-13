@@ -1,12 +1,12 @@
 import { MOCK_COMERCIOS, MOCK_PROMOCIONES, MOCK_USOS_PROMOCION } from "../mocks/datos";
 import { ApiResponse, Promocion, UsoDePromocion } from "../types";
 import {
-    USAR_MOCKS,
-    crearRespuestaError,
-    crearRespuestaExito,
-    peticionApi,
-    simularLatencia,
-    verificarErrorRedSimulado
+  USAR_MOCKS,
+  crearRespuestaError,
+  crearRespuestaExito,
+  peticionApi,
+  simularLatencia,
+  verificarErrorRedSimulado
 } from "./api";
 
 let promocionesMemoria: Promocion[] = [...MOCK_PROMOCIONES];
@@ -160,14 +160,14 @@ export async function obtenerPromocionPorId(
 export async function obtenerCodigoDeUsoPromocion(
   promocionId: string,
   usuarioId: string,
-  token: string | null = null
+  token?: string | null
 ): Promise<ApiResponse<UsoDePromocion>> {
   if (!USAR_MOCKS) {
-    return peticionApi<UsoDePromocion>(
-      `/promociones/${promocionId}/codigo`,
-      { method: "POST" },
-      token
-    );
+      return peticionApi<UsoDePromocion>(
+    `/promociones/${promocionId}/usos`,
+    { method: "POST" },
+    token
+  );
   }
 
   await simularLatencia(300);
@@ -220,28 +220,33 @@ export async function obtenerCodigoDeUsoPromocion(
  * Permite al comercio escanear y validar el código QR del cliente en el mostrador,
  * registrando la fecha de validación e incrementando el contador de usos.
  */
+
 export async function validarCodigoPromocionPorComercio(
   codigoEscaneado: string,
-  comercioId: string,
-  token: string | null = null
-): Promise<ApiResponse<{ uso: UsoDePromocion; promocion: Promocion }>> {
+  comercioId?: string,
+  token?: string | null
+): Promise<ApiResponse<UsoDePromocion>> {
+  const codigo = codigoEscaneado.trim().toUpperCase();
+
   if (!USAR_MOCKS) {
-    return peticionApi<{ uso: UsoDePromocion; promocion: Promocion }>(
-      `/promociones/validar-codigo`,
+    return peticionApi<UsoDePromocion>(
+      `/mi-comercio/usos/validar`,
       {
         method: "POST",
-        body: JSON.stringify({ codigo: codigoEscaneado, comercioId })
+        body: JSON.stringify({ codigo })
       },
       token
     );
   }
 
   await simularLatencia(400);
-  const errorRed = verificarErrorRedSimulado<{ uso: UsoDePromocion; promocion: Promocion }>();
+
+  const errorRed = verificarErrorRedSimulado<UsoDePromocion>();
   if (errorRed) return errorRed;
 
-  const codigoLimpio = codigoEscaneado.trim().toUpperCase();
-  const indiceUso = usosMemoria.findIndex((u) => u.codigo.toUpperCase() === codigoLimpio);
+  const indiceUso = usosMemoria.findIndex(
+    (u) => u.codigo.toUpperCase() === codigo
+  );
 
   if (indiceUso === -1) {
     return crearRespuestaError(
@@ -259,7 +264,10 @@ export async function validarCodigoPromocionPorComercio(
     );
   }
 
-  const indicePromo = promocionesMemoria.findIndex((p) => p.id === uso.promocionId);
+  const indicePromo = promocionesMemoria.findIndex(
+    (p) => p.id === uso.promocionId
+  );
+
   if (indicePromo === -1) {
     return crearRespuestaError(
       "PROMO_NO_ENCONTRADA",
@@ -269,7 +277,7 @@ export async function validarCodigoPromocionPorComercio(
 
   const promo = promocionesMemoria[indicePromo];
 
-  if (promo.comercioId !== comercioId) {
+  if (comercioId && promo.comercioId !== comercioId) {
     return crearRespuestaError(
       "COMERCIO_INCORRECTO",
       "Este código pertenece a otro comercio."
@@ -277,28 +285,27 @@ export async function validarCodigoPromocionPorComercio(
   }
 
   const estado = obtenerEstadoPromocion(promo);
+
   if (estado === "vencida" || estado === "inactiva") {
-    return crearRespuestaError("PROMO_VENCIDA", "Esa promoción ya no está vigente.");
+    return crearRespuestaError(
+      "PROMO_VENCIDA",
+      "Esa promoción ya no está vigente."
+    );
   }
 
-  // Registramos el uso y sumamos 1 al contador de la promoción
   const usoActualizado: UsoDePromocion = {
     ...uso,
     validadoEn: new Date().toISOString()
   };
 
-  const promoActualizada: Promocion = {
+  usosMemoria[indiceUso] = usoActualizado;
+
+  promocionesMemoria[indicePromo] = {
     ...promo,
     usos: promo.usos + 1
   };
 
-  usosMemoria[indiceUso] = usoActualizado;
-  promocionesMemoria[indicePromo] = promoActualizada;
-
-  return crearRespuestaExito(
-    { uso: { ...usoActualizado }, promocion: { ...promoActualizada } },
-    1
-  );
+  return crearRespuestaExito({ ...usoActualizado }, 1);
 }
 
 /**

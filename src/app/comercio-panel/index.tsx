@@ -3,6 +3,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
+import { validarCodigoPromocionPorComercio } from '../../services/promociones';
 
 export default function ComercioDashboardScreen() {
   const { usuario, cerrarSesion } = useAuth();
@@ -13,17 +14,31 @@ export default function ComercioDashboardScreen() {
   const [ultimoCodigo, setUltimoCodigo] = useState<string | null>(null);
 
   // Manejador cuando la cámara detecta un QR
-  const procesarCodigoQR = ({ data }: { data: string }) => {
-    setEscaneando(false);
-    setUltimoCodigo(data);
-    
-    // Aquí iría la llamada al servicio real: validarCodigoServicio(data)
+ 
+const procesarCodigoQR = async ({ data }: { data: string }) => {
+  setEscaneando(false);
+  setUltimoCodigo(data);
+
+  const respuesta = await validarCodigoPromocionPorComercio(
+    data,
+    usuario?.comercioId ?? undefined
+  );
+
+  if (respuesta.datos) {
     Alert.alert(
-      "Código Detectado",
-      `El código ${data} ha sido validado exitosamente para aplicar el descuento.`,
+      "¡Promoción validada!",
+      `El código ${respuesta.datos.codigo} fue validado correctamente.`,
       [{ text: "Aceptar", onPress: () => setUltimoCodigo(null) }]
     );
-  };
+    return;
+  }
+
+  Alert.alert(
+    "No se pudo validar",
+    respuesta.error?.mensaje ?? "Ocurrió un error al validar el código.",
+    [{ text: "Aceptar", onPress: () => setUltimoCodigo(null) }]
+  );
+};
 
   if (!permisoCamara) {
     return <View style={styles.pantalla} />; // Cargando permisos
