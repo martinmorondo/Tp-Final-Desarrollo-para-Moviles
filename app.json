@@ -16,41 +16,60 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundColor": "#1E3A8A"
       },
-      "package": "com.martinmorondo.directorioccu"
+      "package": "com.martinmorondo.directorioccu",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/images/favicon.png",
       "bundler": "metro"
     },
-    "plugins": [
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#1E3A8A"
-        }
-      ],
-      "expo-router",
-      [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "Directorio CCU necesita acceder a tu ubicación para mostrarte los comercios locales que tienes cerca en el mapa interactivo."
-        }
-      ],
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Directorio CCU necesita acceso a la cámara para que los comercios puedan escanear y validar los códigos QR de las promociones."
-        }
-      ],
-      "expo-secure-store",
-      "expo-font",
-      "expo-sqlite"
-    ],
+    
+"plugins": [
+  [
+    "expo-splash-screen",
+    {
+      "image": "./assets/images/splash-icon.png",
+      "imageWidth": 200,
+      "resizeMode": "contain",
+      "backgroundColor": "#1E3A8A"
+    }
+  ],
+  [
+    "expo-sqlite",
+    {
+      "enableFTS": true
+    }
+  ],
+  "expo-router",
+  [
+    "expo-location",
+    {
+      "locationAlwaysAndWhenInUsePermission": "Directorio CCU necesita acceder a tu ubicación para mostrarte los comercios locales que tienes cerca en el mapa interactivo."
+    }
+  ],
+  [
+    "expo-camera",
+    {
+      "cameraPermission": "Directorio CCU necesita acceso a la cámara para que los comercios puedan escanear y validar los códigos QR de las promociones."
+    }
+  ],
+  "expo-secure-store",
+  "expo-font"
+],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1a69f685-a00d-4e83-993d-bcf7c8aba61a"
+      }
+    },
+    "owner": "martinmorondo"
   }
 }
