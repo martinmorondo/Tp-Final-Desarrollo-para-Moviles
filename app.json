@@ -17,6 +17,7 @@
         "backgroundColor": "#1E3A8A"
       },
       "package": "com.martinmorondo.directorioccu",
+      "usesCleartextTraffic": true,
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
