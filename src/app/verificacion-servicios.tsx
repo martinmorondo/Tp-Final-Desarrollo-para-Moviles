@@ -7,10 +7,10 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import { Comercio, Promocion } from "../../src/types";
 import { configurarSimulacionErrorRed, estaSimulandoErrorRed } from "../services/api";
 import { obtenerComercios } from "../services/comercios";
 import { obtenerPromociones, obtenerPromocionPorId } from "../services/promociones";
+import { Comercio, Promocion } from "../types";
 import { obtenerResumenHorario } from "../utils/horarios";
 
 export default function PantallaVerificacionServicios() {
