@@ -2,12 +2,12 @@ import { MOCK_COMERCIOS } from "../mocks/datos";
 import { ApiResponse, Comercio } from "../types";
 import { estaAbiertoAhora } from "../utils/horarios";
 import {
-    USAR_MOCKS,
-    crearRespuestaError,
-    crearRespuestaExito,
-    peticionApi,
-    simularLatencia,
-    verificarErrorRedSimulado
+  USAR_MOCKS,
+  crearRespuestaError,
+  crearRespuestaExito,
+  peticionApi,
+  simularLatencia,
+  verificarErrorRedSimulado
 } from "./api";
 
 // Copia en memoria para que las ediciones del rol comercio persistan durante la sesión
@@ -119,15 +119,15 @@ export async function actualizarComercio(
   token: string | null = null
 ): Promise<ApiResponse<Comercio>> {
   if (!USAR_MOCKS) {
-    return peticionApi<Comercio>(
-      `/comercios/${id}`,
-      {
-        method: "PUT",
-        body: JSON.stringify(cambios)
-      },
-      token
-    );
-  }
+  return peticionApi<Comercio>(
+    "/mi-comercio",
+    {
+      method: "PATCH",
+      body: JSON.stringify(cambios)
+    },
+    token
+  );
+}
 
   await simularLatencia(400);
   const errorRed = verificarErrorRedSimulado<Comercio>();

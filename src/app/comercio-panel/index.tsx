@@ -1,4 +1,3 @@
-
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -67,13 +66,13 @@ export default function ComercioDashboardScreen() {
     }, [cargarPromociones])
   );
 
-  // Confirmar y realizar la baja de una promoción
+  // Confirmar y realizar la baja de una promociÃ³n
   const confirmarBajaPromocion = (promo: Promocion) => {
     if (promocionDandoBaja !== null || !promo.activa) return;
 
     Alert.alert(
-      'Dar de baja promoción',
-      `¿Estás seguro de que querés dar de baja "${promo.titulo}"? La promoción dejará de estar disponible para los vecinos.`,
+      'Dar de baja promociÃ³n',
+      `Â¿EstÃ¡s seguro de que querÃ©s dar de baja "${promo.titulo}"? La promociÃ³n dejarÃ¡ de estar disponible para los vecinos.`,
       [
         {
           text: 'Cancelar',
@@ -103,13 +102,13 @@ export default function ComercioDashboardScreen() {
               await cargarPromociones();
 
               Alert.alert(
-                'Promoción dada de baja',
-                'La promoción fue desactivada correctamente.'
+                'PromociÃ³n dada de baja',
+                'La promociÃ³n fue desactivada correctamente.'
               );
             } catch {
               Alert.alert(
                 'Error',
-                'No se pudo dar de baja la promoción. Intentá nuevamente.'
+                'No se pudo dar de baja la promociÃ³n. IntentÃ¡ nuevamente.'
               );
             } finally {
               setPromocionDandoBaja(null);
@@ -120,7 +119,7 @@ export default function ComercioDashboardScreen() {
     );
   };
 
-  // Escanear y validar código QR
+  // Escanear y validar cÃ³digo QR
   const procesarCodigoQR = async ({ data }: { data: string }) => {
     if (ultimoCodigo !== null) return;
 
@@ -135,8 +134,8 @@ export default function ComercioDashboardScreen() {
 
       if (respuesta.datos) {
         Alert.alert(
-          '¡Promoción validada!',
-          `El código ${respuesta.datos.codigo} fue validado correctamente.`,
+          'Â¡PromociÃ³n validada!',
+          `El cÃ³digo ${respuesta.datos.codigo} fue validado correctamente.`,
           [
             {
               text: 'Aceptar',
@@ -153,7 +152,7 @@ export default function ComercioDashboardScreen() {
       Alert.alert(
         'No se pudo validar',
         respuesta.error?.mensaje ??
-          'Ocurrió un error al validar el código.',
+          'OcurriÃ³ un error al validar el cÃ³digo.',
         [
           {
             text: 'Aceptar',
@@ -164,7 +163,7 @@ export default function ComercioDashboardScreen() {
     } catch {
       Alert.alert(
         'Error',
-        'No se pudo validar el código QR.',
+        'No se pudo validar el cÃ³digo QR.',
         [
           {
             text: 'Aceptar',
@@ -203,7 +202,7 @@ export default function ComercioDashboardScreen() {
       </View>
 
       {escaneando ? (
-        /* Escáner QR */
+        /* EscÃ¡ner QR */
         <View style={styles.contenedorCamara}>
           <CameraView
             style={styles.camara}
@@ -222,7 +221,7 @@ export default function ComercioDashboardScreen() {
             <View style={styles.marcoEscaneo} />
 
             <Text style={styles.textoCamara}>
-              Apuntá al código QR del cliente
+              ApuntÃ¡ al cÃ³digo QR del cliente
             </Text>
 
             <TouchableOpacity
@@ -237,7 +236,7 @@ export default function ComercioDashboardScreen() {
         </View>
       ) : (
         <View style={styles.panelAcciones}>
-          {/* Botón del escáner */}
+          {/* BotÃ³n del escÃ¡ner */}
           {!permisoCamara.granted ? (
             <TouchableOpacity
               style={styles.botonPrincipal}
@@ -250,7 +249,7 @@ export default function ComercioDashboardScreen() {
               />
 
               <Text style={styles.textoBotonPrincipal}>
-                Habilitar Cámara
+                Habilitar CÃ¡mara
               </Text>
             </TouchableOpacity>
           ) : (
@@ -265,18 +264,27 @@ export default function ComercioDashboardScreen() {
               />
 
               <Text style={styles.textoBotonPrincipal}>
-                Escanear Promoción
+                Escanear PromociÃ³n
               </Text>
             </TouchableOpacity>
           )}
 
-          {/* Sección de promociones */}
+          {/* Acceso a edición del comercio */}
+          <TouchableOpacity
+            style={styles.botonEditarComercio}
+            onPress={() => router.push('/comercio-panel/editar-comercio')}
+          >
+            <Ionicons name="create-outline" size={22} color="#1E3A8A" />
+            <Text style={styles.textoEditarComercio}>Editar mi comercio</Text>
+          </TouchableOpacity>
+
+          {/* SecciÃ³n de promociones */}
           <View style={styles.seccionPromociones}>
             <Text style={styles.tituloSeccion}>
               Mis promociones
             </Text>
 
-            {/* Crear promoción */}
+            {/* Crear promociÃ³n */}
             <TouchableOpacity
               style={styles.botonNuevaPromocion}
               onPress={() =>
@@ -292,7 +300,7 @@ export default function ComercioDashboardScreen() {
               />
 
               <Text style={styles.textoNuevaPromocion}>
-                Nueva promoción
+                Nueva promociÃ³n
               </Text>
             </TouchableOpacity>
 
@@ -317,7 +325,7 @@ export default function ComercioDashboardScreen() {
               </View>
             ) : promociones.length === 0 ? (
               <Text style={styles.mensajePromociones}>
-                Todavía no tenés promociones registradas.
+                TodavÃa no tenÃ©s promociones registradas.
               </Text>
             ) : (
               promociones.map((promo) => {
@@ -326,7 +334,7 @@ export default function ComercioDashboardScreen() {
                   : new Date(promo.hasta).getTime() < Date.now()
                     ? 'Vencida'
                     : new Date(promo.desde).getTime() > Date.now()
-                      ? 'Próxima'
+                      ? 'PrÃ³xima'
                       : 'Vigente';
 
                 const sePuedeEditar =
@@ -341,7 +349,7 @@ export default function ComercioDashboardScreen() {
                     key={promo.id}
                     style={styles.tarjetaPromocion}
                   >
-                    {/* Información */}
+                    {/* InformaciÃ³n */}
                     <Text style={styles.tituloPromocion}>
                       {promo.titulo}
                     </Text>
@@ -361,7 +369,7 @@ export default function ComercioDashboardScreen() {
                       </Text>
                     </View>
 
-                    {/* Editar promoción */}
+                    {/* Editar promociÃ³n */}
                     {sePuedeEditar && (
                       <TouchableOpacity
                         style={styles.botonEditarPromocion}
@@ -382,12 +390,12 @@ export default function ComercioDashboardScreen() {
                         />
 
                         <Text style={styles.textoEditarPromocion}>
-                          Editar promoción
+                          Editar promociÃ³n
                         </Text>
                       </TouchableOpacity>
                     )}
 
-                    {/* Dar de baja promoción */}
+                    {/* Dar de baja promociÃ³n */}
                     {promo.activa && (
                       <TouchableOpacity
                         style={[
@@ -421,7 +429,7 @@ export default function ComercioDashboardScreen() {
             )}
           </View>
 
-          {/* Cerrar sesión */}
+          {/* Cerrar sesiÃ³n */}
           <TouchableOpacity
             style={styles.botonSalir}
             onPress={cerrarSesion}
@@ -433,7 +441,7 @@ export default function ComercioDashboardScreen() {
             />
 
             <Text style={styles.textoBotonSalir}>
-              Cerrar Sesión
+              Cerrar SesiÃ³n
             </Text>
           </TouchableOpacity>
         </View>
@@ -484,6 +492,22 @@ const styles = StyleSheet.create({
   textoBotonPrincipal: {
     color: '#FFFFFF',
     fontSize: 18,
+    fontWeight: 'bold',
+  },
+  botonEditarComercio: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    paddingVertical: 16,
+    borderRadius: 12,
+  },
+  textoEditarComercio: {
+    color: '#1E3A8A',
+    fontSize: 16,
     fontWeight: 'bold',
   },
   botonSalir: {
