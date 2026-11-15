@@ -22,11 +22,11 @@ export type EstadoTemporalPromocion =
 export interface FiltrosPromociones {
   rubroId?: string | null;
   comercioId?: string;
-  estado?: "todas_no_vencidas" | "vigentes" | "por_vencer" | "proximas";
+  estado?: "todas_no_vencidas" | "vigentes" | "por-vencer" | "proximas";
   fechaReferencia?: Date;
 }
 
-const DIAS_POR_VENCER = 7;
+const DIAS_POR_VENCER = 3;
 
 /**
  * Clasifica el estado de una promoción cruzando sus fechas 'desde' y 'hasta' (ISO 8601)
@@ -70,12 +70,47 @@ export async function obtenerPromociones(
   filtros: FiltrosPromociones = {}
 ): Promise<ApiResponse<Promocion[]>> {
   if (!USAR_MOCKS) {
+  const estadoBuscado = filtros.estado ?? "todas_no_vencidas";
+
+  const consultar = (estado: "vigentes" | "proximas" | "por-vencer") => {
     const params = new URLSearchParams();
+
     if (filtros.rubroId) params.append("rubroId", filtros.rubroId);
     if (filtros.comercioId) params.append("comercioId", filtros.comercioId);
-    const query = params.toString() ? `?${params.toString()}` : "";
-    return peticionApi<Promocion[]>(`/promociones${query}`);
+
+    params.append("estado", estado);
+
+    return peticionApi<Promocion[]>(`/promociones?${params.toString()}`);
+  };
+
+  if (estadoBuscado === "todas_no_vencidas") {
+    const [vigentes, proximas] = await Promise.all([
+      consultar("vigentes"),
+      consultar("proximas"),
+    ]);
+
+    if (vigentes.error) return vigentes;
+    if (proximas.error) return proximas;
+
+    const datosVigentes = vigentes.datos ?? [];
+    const datosProximas = proximas.datos ?? [];
+
+    const promocionesUnicas = Array.from(
+      new Map(
+        [...datosVigentes, ...datosProximas].map((promo) => [
+          promo.id,
+          promo,
+        ])
+      ).values()
+    );
+
+    return crearRespuestaExito(promocionesUnicas, promocionesUnicas.length);
   }
+
+const estadoApi = estadoBuscado;
+
+  return consultar(estadoApi);
+}
 
   await simularLatencia(350);
   const errorRed = verificarErrorRedSimulado<Promocion[]>();
@@ -95,7 +130,7 @@ export async function obtenerPromociones(
     if (estadoBuscado === "vigentes") {
       return estado === "vigente" || estado === "por_vencer";
     }
-    if (estadoBuscado === "por_vencer") {
+    if (estadoBuscado === "por-vencer") {
       return estado === "por_vencer";
     }
     if (estadoBuscado === "proximas") {
@@ -313,31 +348,51 @@ export async function validarCodigoPromocionPorComercio(
  */
 export async function obtenerPromocionesDelComercioPanel(
   comercioId: string,
-  token: string | null = null
+  token?: string | null
 ): Promise<ApiResponse<Promocion[]>> {
   if (!USAR_MOCKS) {
-    return peticionApi<Promocion[]>(`/comercios/${comercioId}/promociones`, {}, token);
+    return peticionApi<Promocion[]>(
+      "/mi-comercio/promociones",
+      {},
+      token
+    );
   }
 
   await simularLatencia(300);
   const errorRed = verificarErrorRedSimulado<Promocion[]>();
   if (errorRed) return errorRed;
 
-  const propias = promocionesMemoria.filter((p) => p.comercioId === comercioId);
+  const propias = promocionesMemoria.filter(
+    (p) => p.comercioId === comercioId
+  );
+
   return crearRespuestaExito(propias, propias.length);
 }
 
 /**
  * Panel de Comercio: Crea una nueva promoción.
  */
+export type DatosCrearPromocion = {
+  titulo: string;
+  detalle: string;
+  descuento?: number | null;
+  desde?: string;
+  hasta: string;
+  imagenUrl?: string | null;
+  soloApp?: boolean;
+};
+
 export async function crearPromocion(
-  nueva: Omit<Promocion, "id" | "usos" | "activa">,
-  token: string | null = null
+  nueva: DatosCrearPromocion,
+  token?: string | null
 ): Promise<ApiResponse<Promocion>> {
   if (!USAR_MOCKS) {
     return peticionApi<Promocion>(
-      `/promociones`,
-      { method: "POST", body: JSON.stringify(nueva) },
+      "/mi-comercio/promociones",
+      {
+        method: "POST",
+        body: JSON.stringify(nueva),
+      },
       token
     );
   }
@@ -348,9 +403,14 @@ export async function crearPromocion(
 
   const promocionCreada: Promocion = {
     ...nueva,
+    comercioId: "com-101",
+    desde: nueva.desde ?? new Date().toISOString(),
+    imagenUrl: nueva.imagenUrl ?? null,
+    descuento: nueva.descuento ?? null,
+    soloApp: nueva.soloApp ?? false,
     id: `pro-${Date.now()}`,
     usos: 0,
-    activa: true
+    activa: true,
   };
 
   promocionesMemoria.unshift(promocionCreada);
@@ -360,15 +420,19 @@ export async function crearPromocion(
 /**
  * Panel de Comercio: Edita o da de baja una promoción existente.
  */
+
 export async function actualizarPromocion(
   id: string,
-  cambios: Partial<Omit<Promocion, "id" | "comercioId" | "usos">>,
-  token: string | null = null
+  cambios: Partial<DatosCrearPromocion>,
+  token?: string | null
 ): Promise<ApiResponse<Promocion>> {
   if (!USAR_MOCKS) {
     return peticionApi<Promocion>(
-      `/promociones/${id}`,
-      { method: "PUT", body: JSON.stringify(cambios) },
+      `/mi-comercio/promociones/${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(cambios),
+      },
       token
     );
   }
@@ -378,15 +442,63 @@ export async function actualizarPromocion(
   if (errorRed) return errorRed;
 
   const indice = promocionesMemoria.findIndex((p) => p.id === id);
+
   if (indice === -1) {
-    return crearRespuestaError("PROMO_NO_ENCONTRADA", "La promoción no existe.");
+    return crearRespuestaError(
+      "PROMO_NO_ENCONTRADA",
+      "La promoción no existe."
+    );
   }
 
   const actualizada: Promocion = {
     ...promocionesMemoria[indice],
-    ...cambios
+    ...cambios,
   };
 
   promocionesMemoria[indice] = actualizada;
+
   return crearRespuestaExito({ ...actualizada }, 1);
+}
+
+
+/**
+ * Panel de Comercio: Da de baja una promoción propia.
+ * El backend realiza una baja lógica (activa = false).
+ */
+export async function darDeBajaPromocion(
+  id: string,
+  token?: string | null
+): Promise<ApiResponse<null>> {
+  if (!USAR_MOCKS) {
+    return peticionApi<null>(
+      `/mi-comercio/promociones/${encodeURIComponent(id)}`,
+      {
+        method: "DELETE",
+      },
+      token
+    );
+  }
+
+  await simularLatencia(350);
+
+  const errorRed = verificarErrorRedSimulado<null>();
+  if (errorRed) return errorRed;
+
+  const indice = promocionesMemoria.findIndex(
+    (p) => p.id === id
+  );
+
+  if (indice === -1) {
+    return crearRespuestaError(
+      "PROMO_NO_ENCONTRADA",
+      "La promoción no existe."
+    );
+  }
+
+  promocionesMemoria[indice] = {
+    ...promocionesMemoria[indice],
+    activa: false,
+  };
+
+  return crearRespuestaExito(null);
 }

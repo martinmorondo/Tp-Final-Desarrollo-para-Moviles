@@ -5,8 +5,13 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import QRCode from 'react-native-qrcode-svg';
 import { EstadoPantalla } from '../../components/feedback/EstadoPantalla';
 import { useAuth } from '../../context/AuthContext';
-import { obtenerCodigoDeUsoPromocion, obtenerPromocionPorId } from '../../services/promociones';
-import { Promocion, UsoDePromocion } from '../../types';
+import {
+  obtenerCodigoDeUsoPromocion,
+  obtenerPromocionPorId,
+} from '../../services/promociones';
+
+import { obtenerComercioPorId } from '../../services/comercios';
+import { Comercio, Promocion, UsoDePromocion } from '../../types';
 
 export default function DetallePromocionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -14,22 +19,32 @@ export default function DetallePromocionScreen() {
   const { usuario } = useAuth();
   
   const [promocion, setPromocion] = useState<Promocion | null>(null);
+  const [comercio, setComercio] = useState<Comercio | null>(null);
   const [codigoUso, setCodigoUso] = useState<UsoDePromocion | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cargandoCodigo, setCargandoCodigo] = useState(false);
 
-  const cargarDatos = async () => {
-    setCargando(true);
-    setError(null);
-    const res = await obtenerPromocionPorId(id as string);
-    if (res.error) {
-      setError(res.error.mensaje);
-    } else if (res.datos) {
-      setPromocion(res.datos);
-    }
-    setCargando(false);
-  };
+ const cargarDatos = async () => {
+  setCargando(true);
+  setError(null);
+
+  const res = await obtenerPromocionPorId(id as string);
+
+  if (res.error) {
+    setError(res.error.mensaje);
+  } else if (res.datos) {
+    setPromocion(res.datos);
+
+    const respuestaComercio = await obtenerComercioPorId(
+      res.datos.comercioId
+    );
+
+    setComercio(respuestaComercio.datos ?? null);
+  }
+
+  setCargando(false);
+};
 
   useEffect(() => {
     cargarDatos();
@@ -67,6 +82,20 @@ export default function DetallePromocionScreen() {
         <View style={styles.tarjetaInfo}>
           <Text style={styles.titulo}>{promocion.titulo}</Text>
           <Text style={styles.detalle}>{promocion.detalle}</Text>
+
+          {comercio && (
+          <TouchableOpacity
+            style={styles.filaComercio}
+            onPress={() => router.push(`/comercio/${comercio.id}`)}
+          >
+            <Ionicons name="storefront-outline" size={22} color="#1E3A8A" />
+            <View style={styles.infoComercio}>
+              <Text style={styles.nombreComercio}>{comercio.nombre}</Text>
+              <Text style={styles.direccionComercio}>{comercio.direccion}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#64748B" />
+          </TouchableOpacity>
+        )}
           
           <View style={styles.filaInfo}>
             <Ionicons name="calendar-outline" size={20} color="#64748B" />
@@ -127,5 +156,27 @@ const styles = StyleSheet.create({
   cajaQRVisible: { alignItems: 'center', width: '100%' },
   instruccionQR: { fontSize: 16, fontWeight: '600', color: '#0F172A', marginBottom: 20 },
   marcoQR: { padding: 16, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#E2E8F0', borderRadius: 12 },
-  codigoTexto: { marginTop: 16, fontSize: 18, fontWeight: 'bold', letterSpacing: 2, color: '#334155' }
+  codigoTexto: { marginTop: 16, fontSize: 18, fontWeight: 'bold', letterSpacing: 2, color: '#334155' },
+  filaComercio: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#EFF6FF',
+  padding: 12,
+  borderRadius: 8,
+  marginBottom: 16,
+},
+infoComercio: {
+  flex: 1,
+  marginLeft: 10,
+},
+nombreComercio: {
+  fontSize: 15,
+  fontWeight: 'bold',
+  color: '#1E3A8A',
+},
+direccionComercio: {
+  fontSize: 13,
+  color: '#64748B',
+  marginTop: 3,
+},
 });
